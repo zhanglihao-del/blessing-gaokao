@@ -104,9 +104,9 @@
     <h2>2026年高考祝福语</h2>
     <div class="tips">attention：一行一条祝福噢! 把你对高考考生（对本人or他人）的祝福语输入在这里叭</div>
     <textarea id="txt" placeholder="可以输入类似以下的祝福语咩：
-粽甜人安，朝夕相伴
-邻里和睦，岁岁吉祥
-风调雨顺，水乡兴旺"></textarea>
+以梦为马，不负韶华
+高考只是一站，前途万般风光
+笔下有乾坤，心中存理想"></textarea>
     <div class="btn-box">
         <button id="startBtn" onclick="startShow()">开启滚动祝福语</button>
     </div>
@@ -142,7 +142,7 @@ let lineUsed = new Array(lineCount).fill(false); //标记通道是否占用
 
 function startShow(){
     let val = document.getElementById('txt').value.trim();
-    if(!val){alert('请填写湘桥端午祝福内容！');return;}
+    if(!val){alert('请填写高考祝福内容！');return;}
     blessList = val.split('\n').filter(item=>item.trim()!='');
     inputPage.style.display = 'none';
     showPage.style.display = 'block';
