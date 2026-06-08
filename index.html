@@ -5,19 +5,17 @@
     <title>高考祝福屏</title>
     <style>
         :root {
-            --brick-red:#A83229;    /*湘桥古厝红砖色*/
-            --tile-green:#395E49;    /*青瓦艾草绿*/
-            --stone-gray:#707973;    /*青石板灰*/
-            --rice-yellow:#F7E9C7;  /*米粽黄*/
-            --river-blue:#265C70;    /*九龙江江水色*/
+            --brick-red:#A83229;
+            --tile-green:#395E49;
+            --stone-gray:#707973;
+            --rice-yellow:#F7E9C7;
+            --river-blue:#265C70;
         }
         *{margin:0;padding:0;box-sizing:border-box;font-family:"宋体","微软雅黑";}
-        /* 页面背景：闽南红砖暗纹 */
         body{
             background:var(--rice-yellow);
             background-image:url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='40' height='40' fill='%23A832290F'/%3E%3Crect x='40' y='40' width='40' height='40' fill='%23A832290F'/%3E%3C/svg%3E");
         }
-        /*输入卡片：仿闽南祖厝木框样式，取消圆角网红风*/
         .wrap{
             width:640px;
             margin:70px auto;
@@ -28,7 +26,6 @@
             box-shadow:6px 6px 0px var(--stone-gray);
             position:relative;
         }
-        /*边角手绘民俗小标识（龙舟、粽子、艾草）*/
         .wrap::before{content:"🛶";position:absolute;top:10px;left:16px;font-size:28px;}
         .wrap::after{content:"🌿";position:absolute;top:10px;right:16px;font-size:28px;}
 
@@ -69,13 +66,12 @@
         }
         #startBtn:hover{background:#8E2922;}
 
-        /*全屏弹幕页：九龙江湘桥江面写实渐变，去掉深色浮夸蓝 */
         #showPage{
             display:none;
             position:fixed;
             inset:0;
             background:linear-gradient(180deg,#32748C,#4A93A8,#62A9B9);
-            background-image:url("data:image/svg+xml,%3Csvg width='120' height='30' viewBox='0 0 120 30' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 15 Q30 5,60 15 T120 15' stroke='%23ffffff12' fill='none'/%3E%3C/svg%3E");
+            background-image:url("data:image/svg+xml,%3Csvg width='120' height='30' viewBox='0 120 30' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 15 Q30 5,60 15 T120 15' stroke='%23ffffff12' fill='none'/%3E%3C/svg%3E");
             overflow:hidden;
         }
         .back-btn{
@@ -90,7 +86,6 @@
             cursor:pointer;
             z-index:999;
         }
-        /*滚动祝福语：闽南传统五色，粗体仿乡村大屏字体*/
         .barrage{
             position:absolute;
             white-space:nowrap;
@@ -100,112 +95,139 @@
     </style>
 </head>
 <body>
+
 <div class="wrap" id="inputPage">
-    <h2>2026年高考祝福语</h2>
-    <div class="tips">attention：一行一条祝福噢! 把你对高考考生（对本人or他人）的祝福语输入在这里叭</div>
-    <textarea id="txt" placeholder="可以输入类似以下的祝福语咩：
-以梦为马，不负韶华
-高考只是一站，前途万般风光
+    <h2>2026年高考祝福语（全网同步）</h2>
+    <div class="tips">一行一条祝福～发送后所有人都能看见！</div>
+    <textarea id="txt" placeholder="输入祝福，按回车分隔
+例如：
+金榜题名
+前程似锦
 笔下有乾坤，心中存理想"></textarea>
     <div class="btn-box">
-        <button id="startBtn" onclick="startShow()">开启滚动祝福语</button>
+        <button id="startBtn" onclick="sendBless()">发送并开启全屏</button>
     </div>
 </div>
 
 <div id="showPage">
-    <button class="back-btn" onclick="backInput()">← 返回修改祝福语</button>
+    <button class="back-btn" onclick="backInput()">← 返回</button>
 </div>
 
+<!-- Firebase 核心库 -->
+<script src="https://www.gstatic.com/firebasejs/10.0.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.0.2/firebase-database-compat.js"></script>
+
 <script>
-let blessList = [];
-let timer = null;
-//【优化1：扩充闽南传统龙舟全色系，新增紫、玫红、浅青、金棕、湖蓝、草绿，大幅减少红色占比】
+// ======================
+//  Firebase 配置（免费）
+// ======================
+const firebaseConfig = {
+  apiKey: "AIzaSyD7zH7t3E7mFzJhHVEF83sM1Ea6f8h8p0E",
+  authDomain: "barrage-gaokao.firebaseapp.com",
+  databaseURL: "https://barrage-gaokao-default-rtdb.firebaseio.com",
+  projectId: "barrage-gaokao",
+  storageBucket: "barrage-gaokao.appspot.com",
+  messagingSenderId: "305055504004",
+  appId: "1:305055504004:web:1c2b52b52d1c0d7f6c1a31"
+};
+
+// 初始化
+if (!firebase.apps.length) {
+  firebase.initializeApp(firebaseConfig);
+}
+const db = firebase.database();
+
+// ======================
+//  全局变量
+// ======================
 const colorArr = [
-    '#D92C2C', //正红
-    '#3A8049',//墨绿
-    '#FFD033',//亮黄
-    '#348E99',//青蓝
-    '#FF8933',//橙
-    '#993399',//端午紫
-    '#FF5599',//玫粉
-    '#66DDAA',//浅艾草青
-    '#CC8844',//古厝棕黄
-    '#22BBEE',//浅湖蓝
-    '#99DD55'//嫩草绿
+    '#D92C2C','#3A8049','#FFD033','#348E99','#FF8933',
+    '#993399','#FF5599','#66DDAA','#CC8844','#22BBEE','#99DD55'
 ];
+const lineCount = 8;
+let lineUsed = new Array(lineCount).fill(false);
 const inputPage = document.getElementById('inputPage');
 const showPage = document.getElementById('showPage');
 
-// 纵向分区变量：页面横向分成8个横向通道，弹幕固定通道生成，避免扎堆疏密失衡
-const lineCount = 8;
-let lineUsed = new Array(lineCount).fill(false); //标记通道是否占用
-
-function startShow(){
+// ======================
+//  发送祝福到云端
+// ======================
+function sendBless(){
     let val = document.getElementById('txt').value.trim();
-    if(!val){alert('请填写高考祝福内容！');return;}
-    blessList = val.split('\n').filter(item=>item.trim()!='');
+    if(!val){alert('请填写祝福');return;}
+    
+    let list = val.split('\n').filter(i=>i.trim());
+    list.forEach(text => {
+        db.ref('bless').push({
+            text: text,
+            time: Date.now()
+        });
+    });
+    
     inputPage.style.display = 'none';
     showPage.style.display = 'block';
-    if(timer) clearInterval(timer);
-    lineUsed.fill(false);
-    createBarrage();
-}
-function backInput(){
-    if(timer) clearInterval(timer);
-    showPage.style.display = 'none';
-    inputPage.style.display = 'block';
-    showPage.innerHTML = '<button class="back-btn" onclick="backInput()">← 返回修改祝福语</button>';
-    lineUsed.fill(false);
+    listenAllBless(); // 开始监听所有人的祝福
 }
 
-function createBarrage(){
-    //【优化2：动态随机生成间隔 450~900ms，不再固定700ms，疏密更均匀】
-    function loopCreate(){
-        // 寻找空闲纵向轨道
-        let freeIndex = lineUsed.findIndex(v=>!v);
-        // 没有空闲轨道则跳过本次生成
-        if(freeIndex === -1){
-            timer = setTimeout(loopCreate,300);
+// ======================
+//  监听实时弹幕
+// ======================
+function listenAllBless(){
+    db.ref('bless').on('child_added', (snapshot) => {
+        let data = snapshot.val();
+        if(data?.text) {
+            createSingleBarrage(data.text);
+        }
+    });
+}
+
+// ======================
+//  创建单条弹幕动画
+// ======================
+function createSingleBarrage(msg){
+    let freeIndex = lineUsed.findIndex(v => !v);
+    if(freeIndex === -1) return;
+    lineUsed[freeIndex] = true;
+
+    let div = document.createElement('div');
+    div.className = 'barrage';
+    div.innerText = msg;
+
+    let sizeList = [24,28,35,45,60,80];
+    let fontSize = sizeList[Math.floor(Math.random()*sizeList.length)];
+    let color = colorArr[Math.floor(Math.random()*colorArr.length)];
+    let top = (window.innerHeight / lineCount * freeIndex) + Math.random()*20;
+    let speed = 1.6 + Math.random()*2.2;
+
+    div.style.cssText = `
+        font-size:${fontSize}px;
+        color:${color};
+        top:${top}px;
+        left:${window.innerWidth}px;
+    `;
+
+    showPage.appendChild(div);
+
+    function move(){
+        let left = parseFloat(div.style.left);
+        left -= speed;
+        div.style.left = left + 'px';
+        if(left < -div.offsetWidth){
+            div.remove();
+            lineUsed[freeIndex] = false;
             return;
         }
-        lineUsed[freeIndex] = true;
-
-        let msg = blessList[Math.floor(Math.random()*blessList.length)];
-        let div = document.createElement('div');
-        div.className = 'barrage';
-        div.innerText = msg;
-        //字号：20~40px，贴合乡村大屏字幕大小
-        // 【优化：文字大小明显错落，超大/中等/偏小 随机】
-        let sizeList = [24, 28, 35, 45, 60, 80]; // 明显不一样的字号池
-        let fontSize = sizeList[Math.floor(Math.random() * sizeList.length)];
-        let ranColor = colorArr[Math.floor(Math.random()*colorArr.length)];
-        //纵向均匀分配8条轨道，均分页面高度，杜绝随机扎堆
-        let topPos = (window.innerHeight / lineCount) * freeIndex + Math.random()*20;
-        let speed = 1.6 + Math.random()*2.2;
-
-        div.style.fontSize = fontSize+'px';
-        div.style.color = ranColor;
-        div.style.top = topPos+'px';
-        div.style.left = window.innerWidth + 'px';
-        showPage.appendChild(div);
-
-        function move(){
-            let left = parseFloat(div.style.left);
-            left -= speed;
-            div.style.left = left+'px';
-            if(left < -div.offsetWidth){
-                div.remove();
-                lineUsed[freeIndex] = false; //弹幕离开释放轨道
-                return;
-            }
-            requestAnimationFrame(move);
-        }
-        move();
-        //随机延时，动态控制生成速率
-        let nextDelay = 450 + Math.random()*450;
-        timer = setTimeout(loopCreate, nextDelay);
+        requestAnimationFrame(move);
     }
-    loopCreate();
+    move();
+}
+
+// ======================
+//  返回输入页
+// ======================
+function backInput(){
+    showPage.style.display = 'none';
+    inputPage.style.display = 'block';
 }
 </script>
 </body>
