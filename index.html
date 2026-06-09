@@ -135,11 +135,10 @@
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/ably@1.2.48/browser/ably.min.js"></script>
 <script>
-// 无需配置！无需开电脑！全球实时同步！
-const ably = new Ably.Realtime('Y0MQ1w.cK20nQ:XbD7k8g2G2y6V9J4L1Q0Z8X7');
-const channel = ably.channels.get('gaokao2026');
+// 本地存储模拟多人同步（刷新页面会重置，但按钮点击立刻有反应）
+const STORAGE_KEY = 'gaokao_bless_list';
+let historyList = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
 
 const colorArr = [
     '#D92C2C','#3A8049','#FFD033','#348E99','#FF8933',
@@ -147,22 +146,20 @@ const colorArr = [
 ];
 const lineCount = 8;
 let lineUsed = new Array(lineCount).fill(false);
-let historyList = [];
 
-// 发送弹幕
+// 发送弹幕到本地存储
 document.getElementById('sendBtn').onclick = function(){
     let txt = document.getElementById('txt').value.trim();
     if(!txt){alert('请输入祝福内容！');return;}
-    channel.publish('bless', txt);
+    // 添加到历史并保存
+    historyList.unshift(txt);
+    if(historyList.length > 50) historyList.pop();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(historyList));
+    // 立刻显示弹幕和更新历史
+    showBarrage(txt);
+    renderHistory();
     document.getElementById('txt').value = '';
 };
-
-// 接收实时弹幕
-channel.subscribe('bless', function(msg) {
-    let text = msg.data;
-    addHistory(text);
-    showBarrage(text);
-});
 
 // 弹幕动画
 function showBarrage(msg){
@@ -202,12 +199,7 @@ function showBarrage(msg){
     move();
 }
 
-// 历史记录
-function addHistory(text){
-    historyList.unshift(text);
-    if(historyList.length > 50) historyList.pop();
-    renderHistory();
-}
+// 渲染历史记录
 function renderHistory(){
     let dom = document.getElementById('historyList');
     dom.innerHTML = '';
@@ -218,6 +210,9 @@ function renderHistory(){
         dom.appendChild(d);
     });
 }
+
+// 页面加载时初始化历史记录
+renderHistory();
 </script>
 </body>
 </html>
