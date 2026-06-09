@@ -17,6 +17,7 @@
             background:var(--rice-yellow);
             background-image:url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='40' height='40' fill='%23A832290F'/%3E%3Crect x='40' y='40' height='40' fill='%23A832290F'/%3E%3C/svg%3E");
         }
+        /* 核心修复：提高输入页层级，确保它在最上层 */
         .wrap{
             width:640px;
             max-width:95%;
@@ -27,7 +28,7 @@
             border-radius:4px;
             box-shadow:6px 6px 0px var(--stone-gray);
             position:relative;
-            z-index: 2; /* 提高输入页层级，让按钮可点击 */
+            z-index: 10; /* 直接设为最高层级 */
         }
         .wrap::before{content:"🛶";position:absolute;top:10px;left:16px;font-size:28px;}
         .wrap::after{content:"🌿";position:absolute;top:10px;right:16px;font-size:28px;}
@@ -57,6 +58,7 @@
             margin-top:20px;
             text-align:center;
         }
+        /* 给按钮加绝对定位和最高层级，确保可点击 */
         #startBtn{
             padding:13px 42px;
             font-size:18px;
@@ -66,17 +68,19 @@
             border-radius:3px;
             cursor:pointer;
             position:relative;
-            z-index:3; /* 单独给按钮加层级，确保可点击 */
+            z-index: 11; /* 比父级更高，万无一失 */
         }
         #startBtn:hover{background:#8E2922;}
+
+        /* 核心修复：把 showPage 改成 absolute，不占视口空间 */
         #showPage{
             display:none;
-            position:fixed;
+            position:absolute;
             inset:0;
             background:linear-gradient(180deg,#32748C,#4A93A8,#62A9B9);
             background-image:url("data:image/svg+xml,%3Csvg width='120' height='30' viewBox='0 0 120 30' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 15 Q30 5,60 15 T120 15' stroke='%23ffffff12' fill='none'/%3E%3C/svg%3E");
             overflow:hidden;
-            z-index: 1; /* 降低弹幕页层级，不再挡住输入页 */
+            z-index: 1; /* 层级远低于输入页 */
         }
         .back-btn{
             position:fixed;top:18px;left:18px;
@@ -162,7 +166,7 @@ let historyList = [];
 
 // ========= 我已经帮你填好你的配置了 =========
 const SUPABASE_URL = "https://cyanonionladoqxqrn.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN5YW5vbmlvbGFkb3F4cXJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAzODA1ODAsImV4cCI6MjA2NTk1NjU4MH0.1H4LdH5V8LdJZJZJZJZJZJZJZJZJZJZJZJZJZJZJZ";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN5YW5vbmlvbGFkb3F4cXJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAzODA1ODAsImV4cCI6MjA2NTk1NjU4MH0.1H4LdH5V8LdJZJZJZJZJZJZJZJZJZJZJZJZJZJZ";
 // ==========================================
 
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
