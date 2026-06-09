@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>高考祝福弹幕</title>
+    <title>2026年高考祝福弹幕</title>
     <style>
         :root {
             --brick-red:#A83229;    /*湘桥古厝红砖色*/
@@ -16,6 +16,7 @@
             background:var(--rice-yellow);
             background-image:url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='40' height='40' fill='%23A832290F'/%3E%3Crect x='40' y='40' width='40' height='40' fill='%23A832290F'/%3E%3C/svg%3E");
         }
+        /* 输入卡片层级最高，保证能点击 */
         .wrap{
             width:640px;
             margin:70px auto;
@@ -25,6 +26,7 @@
             border-radius:4px;
             box-shadow:6px 6px 0px var(--stone-gray);
             position:relative;
+            z-index: 10; /* 关键：层级高于弹幕页 */
         }
         .wrap::before{content:"🛶";position:absolute;top:10px;left:16px;font-size:28px;}
         .wrap::after{content:"🌿";position:absolute;top:10px;right:16px;font-size:28px;}
@@ -50,6 +52,8 @@
             background:#fcfaf4;
             font-size:17px;
             resize:none;
+            position: relative;
+            z-index: 11; /* 输入框层级高于父容器 */
         }
         .btn-box{
             margin-top:20px;
@@ -63,16 +67,19 @@
             border:none;
             border-radius:3px;
             cursor:pointer;
+            position: relative;
+            z-index: 11; /* 按钮层级高于父容器 */
         }
         #sendBtn:hover{background:#8E2922;}
 
+        /* 弹幕页层级低于输入页 */
         #showPage{
-            display:block;
             position:fixed;
             inset:0;
             background:linear-gradient(180deg,#32748C,#4A93A8,#62A9B9);
             background-image:url("data:image/svg+xml,%3Csvg width='120' height='30' viewBox='0 0 120 30' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 15 Q30 5,60 15 T120 15' stroke='%23ffffff12' fill='none'/%3E%3C/svg%3E");
             overflow:hidden;
+            z-index: 1; /* 关键：层级低于输入页 */
         }
 
         .barrage{
@@ -80,6 +87,7 @@
             white-space:nowrap;
             font-weight:550;
             text-shadow:1px 1px 2px #00000077;
+            z-index: 2;
         }
 
         /* 弹幕历史记录面板 */
@@ -94,7 +102,7 @@
             padding:15px;
             border-radius:8px;
             overflow-y:auto;
-            z-index:999;
+            z-index: 9; /* 历史面板层级低于输入页 */
             font-size:14px;
         }
         .history-title{
