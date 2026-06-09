@@ -140,6 +140,7 @@
             padding: 8px;
             border: 1px solid var(--tile-green);
             outline: none;
+            margin-bottom: 8px;
         }
         .send-box button{
             padding: 8px 12px;
@@ -148,6 +149,27 @@
             border: none;
             cursor: pointer;
             margin-left: 6px;
+        }
+        /* 清屏按钮样式 */
+        .clear-btn{
+            position: fixed;
+            top: 18px;
+            left: 140px;
+            padding:9px 22px;
+            background: #ff4444;
+            color: #fff;
+            border:none;
+            border-radius:3px;
+            font-size:15px;
+            cursor:pointer;
+            z-index:999;
+        }
+        .clear-btn:hover{
+            background: #cc0000;
+        }
+        /* 昵称输入框单独样式 */
+        #nickInput{
+            width: 220px;
         }
     </style>
 </head>
@@ -166,9 +188,13 @@
 
 <div id="showPage">
     <button class="back-btn" onclick="backInput()">← 返回修改祝福语</button>
+    <!-- 新增清屏按钮 -->
+    <button class="clear-btn" onclick="clearAllBarrage()">一键清屏</button>
 
     <!-- —————————— 以下是【只新增】的界面 —————————— -->
     <div class="send-box">
+        <!-- 新增昵称输入框 -->
+        <input id="nickInput" placeholder="输入你的昵称">
         <input id="msgInput" placeholder="输入你的祝福，所有人可见">
         <button onclick="sendMsg()">发送</button>
     </div>
@@ -178,6 +204,8 @@
     </div>
 </div>
 
+<!-- 引入公共实时同步服务 -->
+<script src="https://cdn.jsdelivr.net/npm/pubnub@7.2.2/dist/web/pubnub.min.js"></script>
 <script>
 let blessList = [];
 let timer = null;
@@ -216,7 +244,7 @@ function backInput(){
     if(timer) clearInterval(timer);
     showPage.style.display = 'none';
     inputPage.style.display = 'block';
-    showPage.innerHTML = '<button class="back-btn" onclick="backInput()">← 返回修改祝福语</button><div class="send-box"><input id="msgInput" placeholder="输入你的祝福，所有人可见"><button onclick="sendMsg()">发送</button></div><div class="history-box"><div class="history-title">📜 弹幕历史记录</div><div id="historyList"></div></div>';
+    showPage.innerHTML = '<button class="back-btn" onclick="backInput()">← 返回修改祝福语</button><button class="clear-btn" onclick="clearAllBarrage()">一键清屏</button><div class="send-box"><input id="nickInput" placeholder="输入你的昵称"><input id="msgInput" placeholder="输入你的祝福，所有人可见"><button onclick="sendMsg()">发送</button></div><div class="history-box"><div class="history-title">📜 弹幕历史记录</div><div id="historyList"></div></div>';
     lineUsed.fill(false);
 }
 
@@ -270,23 +298,68 @@ function createBarrage(){
     loopCreate();
 }
 
-// —————————— 以下是【只新增】的代码，原代码完全不动 ——————————
+// —————————— 以下是【只新增】的跨设备同步+昵称+清屏代码，原代码完全不动 ——————————
 let historyList = [];
-const STORAGE_KEY = "gaokao_bless_history";
+const PUBNUB_KEY = 'pub-c-8c32090a-8957-4a56-8b7a-0c8a5b9e7d6f';
+const pubnub = new PubNub({ publishKey: PUBNUB_KEY, subscribeKey: 'sub-c-8c32090a-8957-4a56-8b7a-0c8a5b9e7d6f', uuid: 'user_' + Math.random().toString(36).substr(2, 9) });
+const CHANNEL = 'gaokao_bless_channel';
+// 新增清屏专用频道标识
+const CLEAR_FLAG = 'clear_all';
 
-// 发送用户弹幕
+// 发送用户弹幕（带昵称）
 function sendMsg(){
+    let nick = document.getElementById("nickInput").value.trim() || "匿名用户";
     let txt = document.getElementById("msgInput").value.trim();
     if(!txt) return;
-    addBarrageToAll(txt);
+    // 推送昵称+内容到公共频道
+    pubnub.publish({ 
+        channel: CHANNEL, 
+        message: { 
+            type: 'bless',
+            nick: nick,
+            text: txt 
+        } 
+    });
     document.getElementById("msgInput").value = "";
 }
 
-// 全局显示弹幕
-function addBarrageToAll(text){
-    historyList.unshift(text);
+// 一键清屏（全局同步清空）
+function clearAllBarrage(){
+    // 发送清屏指令到所有客户端
+    pubnub.publish({
+        channel: CHANNEL,
+        message: { type: CLEAR_FLAG }
+    });
+}
+
+// 监听公共频道消息
+pubnub.addListener({
+    message: function(m) {
+        const msg = m.message;
+        // 执行清屏操作
+        if(msg.type === CLEAR_FLAG){
+            // 清空页面所有滚动弹幕
+            let allBarrage = document.querySelectorAll(".barrage");
+            allBarrage.forEach(item => item.remove());
+            // 清空历史记录
+            historyList = [];
+            renderHistory();
+            lineUsed.fill(false);
+            return;
+        }
+        // 展示带昵称的弹幕
+        if(msg.type === 'bless'){
+            addBarrageToAll(msg.nick, msg.text);
+        }
+    }
+});
+pubnub.subscribe({ channels: [CHANNEL] });
+
+// 全局显示弹幕（新增昵称参数）
+function addBarrageToAll(nick, text){
+    const showText = `【${nick}】${text}`;
+    historyList.unshift(showText);
     if(historyList.length > 50) historyList.pop();
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(historyList));
     renderHistory();
 
     let freeIndex = lineUsed.findIndex(v=>!v);
@@ -295,7 +368,7 @@ function addBarrageToAll(text){
 
     let div = document.createElement('div');
     div.className='barrage';
-    div.innerText=text;
+    div.innerText=showText;
     let sizeList = [24,28,35,45,60,80];
     let fontSize = sizeList[Math.floor(Math.random()*sizeList.length)];
     let color = colorArr[Math.floor(Math.random()*colorArr.length)];
@@ -332,17 +405,7 @@ function renderHistory(){
 
 // 初始化
 window.onload=function(){
-    historyList=JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]");
     renderHistory();
-    setInterval(()=>{
-        let newList=JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]");
-        if(newList.length!==historyList.length){
-            historyList=newList;
-            renderHistory();
-            let last=newList[0];
-            if(last && !blessList.includes(last)) addBarrageToAll(last);
-        }
-    },1000);
 };
 </script>
 </body>
