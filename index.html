@@ -2,26 +2,24 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <!-- 关键：手机必须有 viewport -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>高考祝福屏</title>
     <style>
         :root {
-            --brick-red:#A83229;
-            --tile-green:#395E49;
-            --stone-gray:#707973;
-            --rice-yellow:#F7E9C7;
-            --river-blue:#265C70;
+            --brick-red:#A83229;    /*湘桥古厝红砖色*/
+            --tile-green:#395E49;    /*青瓦艾草绿*/
+            --stone-gray:#707973;    /*青石板灰*/
+            --rice-yellow:#F7E9C7;  /*米粽黄*/
+            --river-blue:#265C70;    /*九龙江江水色*/
         }
         *{margin:0;padding:0;box-sizing:border-box;font-family:"宋体","微软雅黑";}
+        /* 页面背景：闽南红砖暗纹 */
         body{
             background:var(--rice-yellow);
             background-image:url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='40' height='40' fill='%23A832290F'/%3E%3Crect x='40' y='40' width='40' height='40' fill='%23A832290F'/%3E%3C/svg%3E");
-            touch-action: manipulation; /* 禁止浏览器缩放，解决300ms延迟 */
         }
+        /*输入卡片：仿闽南祖厝木框样式，取消圆角网红风*/
         .wrap{
             width:640px;
-            max-width:95%;
             margin:70px auto;
             padding:32px;
             background:#fffdf8;
@@ -29,8 +27,8 @@
             border-radius:4px;
             box-shadow:6px 6px 0px var(--stone-gray);
             position:relative;
-            z-index: 9999; /* 最顶层，绝不被挡 */
         }
+        /*边角手绘民俗小标识（龙舟、粽子、艾草）*/
         .wrap::before{content:"🛶";position:absolute;top:10px;left:16px;font-size:28px;}
         .wrap::after{content:"🌿";position:absolute;top:10px;right:16px;font-size:28px;}
 
@@ -68,13 +66,10 @@
             border:none;
             border-radius:3px;
             cursor:pointer;
-            min-height:48px; /* 手机触摸区足够大 */
-            min-width:120px;
-            z-index:9999;
-            position:relative;
         }
         #startBtn:hover{background:#8E2922;}
 
+        /*全屏弹幕页：九龙江湘桥江面写实渐变，去掉深色浮夸蓝 */
         #showPage{
             display:none;
             position:fixed;
@@ -82,7 +77,6 @@
             background:linear-gradient(180deg,#32748C,#4A93A8,#62A9B9);
             background-image:url("data:image/svg+xml,%3Csvg width='120' height='30' viewBox='0 0 120 30' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 15 Q30 5,60 15 T120 15' stroke='%23ffffff12' fill='none'/%3E%3C/svg%3E");
             overflow:hidden;
-            z-index: 1;
         }
         .back-btn{
             position:fixed;
@@ -94,44 +88,14 @@
             border-radius:3px;
             font-size:15px;
             cursor:pointer;
-            min-height:48px;
-            z-index:9999; /* 顶层不被挡 */
+            z-index:999;
         }
+        /*滚动祝福语：闽南传统五色，粗体仿乡村大屏字体*/
         .barrage{
             position:absolute;
             white-space:nowrap;
             font-weight:550;
             text-shadow:1px 1px 2px #00000077;
-            pointer-events:none; /* 弹幕永远不挡点击！关键！ */
-        }
-
-        .send-box{
-            position: fixed; bottom: 20px; left: 20px;
-            z-index: 9999;
-            background: #fffdf8;
-            padding: 12px; border: 2px solid var(--tile-green);
-            border-radius: 4px; 
-            max-width:90%;
-        }
-        .send-box input{
-            width: 220px; padding: 8px;
-            border: 1px solid var(--tile-green);
-            outline: none; margin-bottom: 8px;
-            font-size: 16px;
-        }
-        .send-box button{
-            padding: 8px 12px; background: var(--brick-red);
-            color: #fff; border: none; cursor: pointer;
-            min-height:48px;
-            z-index:9999;
-        }
-        .clear-btn{
-            position: fixed; top: 18px; left: 140px;
-            padding:9px 22px; background: #ff4444;
-            color: #fff; border:none; border-radius:3px;
-            font-size:15px; cursor:pointer;
-            min-height:48px;
-            z-index:9999;
         }
     </style>
 </head>
@@ -144,40 +108,37 @@
 高考只是一站，前途万般风光
 笔下有乾坤，心中存理想"></textarea>
     <div class="btn-box">
-        <button id="startBtn">开启滚动祝福语</button>
+        <button id="startBtn" onclick="startShow()">开启滚动祝福语</button>
     </div>
 </div>
 
 <div id="showPage">
-    <button class="back-btn">← 返回修改祝福语</button>
-    <button class="clear-btn">一键清屏</button>
-
-    <div class="send-box">
-        <input id="nickInput" placeholder="输入昵称（可选）">
-        <input id="msgInput" placeholder="输入大家可见的祝福">
-        <button>发送</button>
-    </div>
+    <button class="back-btn" onclick="backInput()">← 返回修改祝福语</button>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-// 你的原代码完全不动
 let blessList = [];
 let timer = null;
+//【优化1：扩充闽南传统龙舟全色系，新增紫、玫红、浅青、金棕、湖蓝、草绿，大幅减少红色占比】
 const colorArr = [
-    '#D92C2C','#3A8049','#FFD033','#348E99','#FF8933',
-    '#993399','#FF5599','#66DDAA','#CC8844','#22BBEE','#99DD55'
+    '#D92C2C', //正红
+    '#3A8049',//墨绿
+    '#FFD033',//亮黄
+    '#348E99',//青蓝
+    '#FF8933',//橙
+    '#993399',//端午紫
+    '#FF5599',//玫粉
+    '#66DDAA',//浅艾草青
+    '#CC8844',//古厝棕黄
+    '#22BBEE',//浅湖蓝
+    '#99DD55'//嫩草绿
 ];
 const inputPage = document.getElementById('inputPage');
 const showPage = document.getElementById('showPage');
-const lineCount = 8;
-let lineUsed = new Array(lineCount).fill(false);
 
-// 改：不用 onclick，用 addEventListener（手机更稳）
-document.getElementById('startBtn').addEventListener('click', startShow);
-document.querySelector('.back-btn').addEventListener('click', backInput);
-document.querySelector('.clear-btn').addEventListener('click', clearAllBarrage);
-document.querySelector('.send-box button').addEventListener('click', sendMsg);
+// 纵向分区变量：页面横向分成8个横向通道，弹幕固定通道生成，避免扎堆疏密失衡
+const lineCount = 8;
+let lineUsed = new Array(lineCount).fill(false); //标记通道是否占用
 
 function startShow(){
     let val = document.getElementById('txt').value.trim();
@@ -193,108 +154,60 @@ function backInput(){
     if(timer) clearInterval(timer);
     showPage.style.display = 'none';
     inputPage.style.display = 'block';
-    showPage.innerHTML = '<button class="back-btn">← 返回修改祝福语</button><button class="clear-btn">一键清屏</button><div class="send-box"><input id="nickInput" placeholder="输入昵称（可选）"><input id="msgInput" placeholder="输入大家可见的祝福"><button>发送</button></div>';
-    // 重新绑定事件
-    document.querySelector('.back-btn').addEventListener('click', backInput);
-    document.querySelector('.clear-btn').addEventListener('click', clearAllBarrage);
-    document.querySelector('.send-box button').addEventListener('click', sendMsg);
+    showPage.innerHTML = '<button class="back-btn" onclick="backInput()">← 返回修改祝福语</button>';
     lineUsed.fill(false);
 }
 
 function createBarrage(){
+    //【优化2：动态随机生成间隔 450~900ms，不再固定700ms，疏密更均匀】
     function loopCreate(){
+        // 寻找空闲纵向轨道
         let freeIndex = lineUsed.findIndex(v=>!v);
+        // 没有空闲轨道则跳过本次生成
         if(freeIndex === -1){
             timer = setTimeout(loopCreate,300);
             return;
         }
         lineUsed[freeIndex] = true;
+
         let msg = blessList[Math.floor(Math.random()*blessList.length)];
         let div = document.createElement('div');
         div.className = 'barrage';
         div.innerText = msg;
-        let sizeList = [24,28,35,45,60,80];
-        let fontSize = sizeList[Math.floor(Math.random()*sizeList.length)];
+        //字号：20~40px，贴合乡村大屏字幕大小
+        // 【优化：文字大小明显错落，超大/中等/偏小 随机】
+        let sizeList = [24, 28, 35, 45, 60, 80]; // 明显不一样的字号池
+        let fontSize = sizeList[Math.floor(Math.random() * sizeList.length)];
         let ranColor = colorArr[Math.floor(Math.random()*colorArr.length)];
-        let topPos = (window.innerHeight/lineCount)*freeIndex + Math.random()*20;
+        //纵向均匀分配8条轨道，均分页面高度，杜绝随机扎堆
+        let topPos = (window.innerHeight / lineCount) * freeIndex + Math.random()*20;
         let speed = 1.6 + Math.random()*2.2;
+
         div.style.fontSize = fontSize+'px';
         div.style.color = ranColor;
         div.style.top = topPos+'px';
-        div.style.left = window.innerWidth+'px';
+        div.style.left = window.innerWidth + 'px';
         showPage.appendChild(div);
+
         function move(){
             let left = parseFloat(div.style.left);
             left -= speed;
             div.style.left = left+'px';
             if(left < -div.offsetWidth){
                 div.remove();
-                lineUsed[freeIndex] = false;
+                lineUsed[freeIndex] = false; //弹幕离开释放轨道
                 return;
             }
             requestAnimationFrame(move);
         }
         move();
+        //随机延时，动态控制生成速率
         let nextDelay = 450 + Math.random()*450;
         timer = setTimeout(loopCreate, nextDelay);
     }
     loopCreate();
 }
-
-// 实时共享
-const SUPABASE_URL = "https://cyanonionladoqxqrn.supabase.co";
-const SUPABASE_KEY = "sb_publishable_5GrcHRNKio5d09cI7IkQ3A_eaugq3_a";
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-async function sendMsg() {
-    let nick = document.getElementById("nickInput").value.trim() || "匿名";
-    let text = document.getElementById("msgInput").value.trim();
-    if (!text) return;
-    await supabase.from("messages").insert([{ nick, text }]);
-    document.getElementById("msgInput").value = "";
-}
-
-async function clearAllBarrage() {
-    await supabase.from("messages").delete().neq("id", 0);
-    document.querySelectorAll(".barrage").forEach(el => el.remove());
-    lineUsed.fill(false);
-}
-
-function addRealTimeBarrage(nick, text) {
-    let free = lineUsed.findIndex(v => !v);
-    if (free === -1) return;
-    lineUsed[free] = true;
-    let d = document.createElement("div");
-    d.className = "barrage";
-    d.innerText = `【${nick}】${text}`;
-    let sizes = [24,28,35,45,60,80];
-    d.style.fontSize = sizes[Math.floor(Math.random()*sizes.length)] + "px";
-    d.style.color = colorArr[Math.floor(Math.random()*colorArr.length)];
-    d.style.top = (window.innerHeight/lineCount)*freeIndex + Math.random()*20 + "px";
-    d.style.left = window.innerWidth + "px";
-    showPage.appendChild(d);
-    function move() {
-        let l = parseFloat(d.style.left);
-        l -= 1.6 + Math.random()*2.2;
-        d.style.left = l + "px";
-        if (l < -d.offsetWidth) {
-            d.remove();
-            lineUsed[free] = false;
-            return;
-        }
-        requestAnimationFrame(move);
-    }
-    move();
-}
-
-supabase.channel("room")
-.on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" },
-  p => addRealTimeBarrage(p.new.nick, p.new.text)
-)
-.on("postgres_changes", { event: "DELETE", schema: "public", table: "messages" },
-  () => document.querySelectorAll(".barrage").forEach(el => el.remove())
-)
-.subscribe();
 </script>
 </body>
+</html> 
 </html>
