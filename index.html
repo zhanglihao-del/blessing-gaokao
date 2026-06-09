@@ -27,7 +27,7 @@
             border-radius:4px;
             box-shadow:6px 6px 0px var(--stone-gray);
             position:relative;
-            z-index: 10;
+            z-index: 2; /* 提高输入页层级，让按钮可点击 */
         }
         .wrap::before{content:"🛶";position:absolute;top:10px;left:16px;font-size:28px;}
         .wrap::after{content:"🌿";position:absolute;top:10px;right:16px;font-size:28px;}
@@ -65,16 +65,18 @@
             border:none;
             border-radius:3px;
             cursor:pointer;
+            position:relative;
+            z-index:3; /* 单独给按钮加层级，确保可点击 */
         }
         #startBtn:hover{background:#8E2922;}
         #showPage{
             display:none;
             position:fixed;
             inset:0;
-            background:linear-gradient(180deg,#3278C,#4A93A8,#62A9B9);
+            background:linear-gradient(180deg,#32748C,#4A93A8,#62A9B9);
             background-image:url("data:image/svg+xml,%3Csvg width='120' height='30' viewBox='0 0 120 30' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 15 Q30 5,60 15 T120 15' stroke='%23ffffff12' fill='none'/%3E%3C/svg%3E");
             overflow:hidden;
-            z-index: 1;
+            z-index: 1; /* 降低弹幕页层级，不再挡住输入页 */
         }
         .back-btn{
             position:fixed;top:18px;left:18px;
