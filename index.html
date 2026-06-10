@@ -116,7 +116,17 @@
     <button class="back-btn" onclick="backInput()">← 返回修改祝福语</button>
 </div>
 
+<!-- 引入 Supabase -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
+// ===================== 你提供的 Supabase 配置 =====================
+const SUPABASE_URL = "https://cyanonionladoqxqrn.supabase.co";
+const SUPABASE_KEY = "sb_publishable_5GrcHRNKio5d09cI7IkQ3A_eaugq3_a";
+
+// 创建 supabase 客户端
+const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ===================== 你原来的所有代码 完全不变 =====================
 let blessList = [];
 let timer = null;
 //【优化1：扩充闽南传统龙舟全色系，新增紫、玫红、浅青、金棕、湖蓝、草绿，大幅减少红色占比】
@@ -140,16 +150,29 @@ const showPage = document.getElementById('showPage');
 const lineCount = 8;
 let lineUsed = new Array(lineCount).fill(false); //标记通道是否占用
 
-function startShow(){
+// ===================== 只修改这里：发送弹幕 + 同步 =====================
+async function startShow(){
     let val = document.getElementById('txt').value.trim();
     if(!val){alert('请填写高考祝福内容！');return;}
-    blessList = val.split('\n').filter(item=>item.trim()!='');
+    
+    // 本地解析
+    let localList = val.split('\n').filter(item=>item.trim()!='');
+    
+    // === 新增：把输入的弹幕 上传到云端 ===
+    for(let msg of localList) {
+        await supabase.from('barrages').insert([{ content: msg }]);
+    }
+    
     inputPage.style.display = 'none';
     showPage.style.display = 'block';
     if(timer) clearInterval(timer);
     lineUsed.fill(false);
+    
+    // 开启实时监听
+    listenRealtimeBarrage();
     createBarrage();
 }
+
 function backInput(){
     if(timer) clearInterval(timer);
     showPage.style.display = 'none';
@@ -158,12 +181,10 @@ function backInput(){
     lineUsed.fill(false);
 }
 
+// ===================== 弹幕创建函数 完全不变 =====================
 function createBarrage(){
-    //【优化2：动态随机生成间隔 450~900ms，不再固定700ms，疏密更均匀】
     function loopCreate(){
-        // 寻找空闲纵向轨道
         let freeIndex = lineUsed.findIndex(v=>!v);
-        // 没有空闲轨道则跳过本次生成
         if(freeIndex === -1){
             timer = setTimeout(loopCreate,300);
             return;
@@ -174,12 +195,9 @@ function createBarrage(){
         let div = document.createElement('div');
         div.className = 'barrage';
         div.innerText = msg;
-        //字号：20~40px，贴合乡村大屏字幕大小
-        // 【优化：文字大小明显错落，超大/中等/偏小 随机】
-        let sizeList = [24, 28, 35, 45, 60, 80]; // 明显不一样的字号池
+        let sizeList = [24, 28, 35, 45, 60, 80];
         let fontSize = sizeList[Math.floor(Math.random() * sizeList.length)];
         let ranColor = colorArr[Math.floor(Math.random()*colorArr.length)];
-        //纵向均匀分配8条轨道，均分页面高度，杜绝随机扎堆
         let topPos = (window.innerHeight / lineCount) * freeIndex + Math.random()*20;
         let speed = 1.6 + Math.random()*2.2;
 
@@ -195,19 +213,38 @@ function createBarrage(){
             div.style.left = left+'px';
             if(left < -div.offsetWidth){
                 div.remove();
-                lineUsed[freeIndex] = false; //弹幕离开释放轨道
+                lineUsed[freeIndex] = false;
                 return;
             }
             requestAnimationFrame(move);
         }
         move();
-        //随机延时，动态控制生成速率
         let nextDelay = 450 + Math.random()*450;
         timer = setTimeout(loopCreate, nextDelay);
     }
     loopCreate();
 }
+
+// ===================== 新增：实时弹幕同步（所有人互通） =====================
+async function listenRealtimeBarrage() {
+    // 先加载历史弹幕
+    const { data } = await supabase.from('barrages').select('content');
+    blessList = data.map(item => item.content);
+
+    // 实时监听新弹幕
+    supabase.channel('public:barrages')
+        .on('postgres_changes', {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'barrages'
+        }, (payload) => {
+            let newMsg = payload.new.content;
+            if(!blessList.includes(newMsg)) {
+                blessList.push(newMsg);
+            }
+        })
+        .subscribe();
+}
 </script>
 </body>
 </html> 
-</html>
