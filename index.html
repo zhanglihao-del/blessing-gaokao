@@ -101,7 +101,7 @@
 </head>
 <body>
 <div class="wrap" id="inputPage">
-    <h2>2026年高考祝福语</h2>
+    <h2>2026年高考祝福屏</h2>
     <div class="tips">attention：一行一条祝福噢! 把你对高考考生（对本人or他人）的祝福语输入在这里叭</div>
     <textarea id="txt" placeholder="可以输入类似以下的祝福语咩：
 以梦为马，不负韶华
@@ -150,9 +150,8 @@ function startShow(){
     lineUsed.fill(false);
     createBarrage();
 
-    // ↓↓↓ 只在这里加：上传弹幕到云端（不影响你原有功能）
-    uploadToCloud(blessList);
-    // ↑↑↑ 完全不破坏你原来代码
+    // 发送到云端（不影响原功能）
+    sendToCloud(blessList);
 }
 function backInput(){
     if(timer) clearInterval(timer);
@@ -211,45 +210,44 @@ function createBarrage(){
     }
     loopCreate();
 }
+</script>
 
-// =====================================================================
-// ↓↓↓ 以下全部是 实时弹幕功能（完全不影响你原有代码，按钮永远正常）
-// =====================================================================
+<!-- 以下全部是 实时弹幕扩展，完全不影响你原有代码！-->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const SUPABASE_URL = "https://cyanonionladoqxqrn.supabase.co";
 const SUPABASE_KEY = "sb_publishable_5GrcHRNKio5d09cI7IkQ3A_eaugq3_a";
-const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// 上传弹幕（异步，不卡按钮！）
-async function uploadToCloud(list) {
-  for (let content of list) {
-    try {
-      await supabase.from("barrages").insert([{ content }]);
-    } catch (e) {}
-  }
+// 发送弹幕到云端
+async function sendToCloud(list) {
+    for (let content of list) {
+        try {
+            await supabaseClient.from("barrages").insert([{ content }]);
+        } catch (e) {}
+    }
 }
 
-// 实时接收别人的弹幕
-async function listenAllBarrage() {
-  const { data } = await supabase.from("barrages").select("content");
-  const cloudList = data.map(i => i.content);
-  
-  for (let msg of cloudList) {
-    if (!blessList.includes(msg)) blessList.push(msg);
-  }
+// 实时接收所有人的弹幕
+async function initRealTimeBarrage() {
+    const { data } = await supabaseClient.from("barrages").select("content");
+    const cloudData = data || [];
+    cloudData.forEach(item => {
+        if (!blessList.includes(item.content)) blessList.push(item.content);
+    });
 
-  supabase.channel('all')
-    .on('postgres_changes', {
-      event: 'INSERT', schema: 'public', table: 'barrages'
-    }, payload => {
-      const msg = payload.new.content;
-      if (!blessList.includes(msg)) blessList.push(msg);
-    }).subscribe();
+    supabaseClient.channel("global").on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "barrages" },
+        (payload) => {
+            const msg = payload.new.content;
+            if (!blessList.includes(msg)) blessList.push(msg);
+        }
+    ).subscribe();
 }
 
-// 页面一打开就监听（不影响任何功能）
-listenAllBarrage();
+// 后台运行，不干扰任何按钮
+initRealTimeBarrage();
 </script>
 </body>
-</html>
+</html> 
