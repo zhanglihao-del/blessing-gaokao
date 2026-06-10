@@ -150,17 +150,32 @@ const showPage = document.getElementById('showPage');
 const lineCount = 8;
 let lineUsed = new Array(lineCount).fill(false); //标记通道是否占用
 
-// ===================== 只修改这里：发送弹幕 + 同步 =====================
+// ===================== 修复版：发送弹幕 + 同步（增加错误处理） =====================
 async function startShow(){
     let val = document.getElementById('txt').value.trim();
     if(!val){alert('请填写高考祝福内容！');return;}
     
     // 本地解析
     let localList = val.split('\n').filter(item=>item.trim()!='');
-    
-    // === 新增：把输入的弹幕 上传到云端 ===
+
+    // 先加载历史弹幕（加try-catch，防止网络错误卡死）
+    try {
+        const { data } = await supabase.from('barrages').select('content');
+        if(data) blessList = data.map(item => item.content);
+    } catch (e) {
+        console.error('加载历史弹幕失败：', e);
+        blessList = [];
+    }
+
+    // 把输入的弹幕上传到云端（加try-catch，防止上传失败卡住）
     for(let msg of localList) {
-        await supabase.from('barrages').insert([{ content: msg }]);
+        try {
+            await supabase.from('barrages').insert([{ content: msg }]);
+        } catch (e) {
+            console.error('上传弹幕失败：', msg, e);
+        }
+        // 同时加入本地列表，保证本地一定能显示
+        if(!blessList.includes(msg)) blessList.push(msg);
     }
     
     inputPage.style.display = 'none';
@@ -227,11 +242,6 @@ function createBarrage(){
 
 // ===================== 新增：实时弹幕同步（所有人互通） =====================
 async function listenRealtimeBarrage() {
-    // 先加载历史弹幕
-    const { data } = await supabase.from('barrages').select('content');
-    blessList = data.map(item => item.content);
-
-    // 实时监听新弹幕
     supabase.channel('public:barrages')
         .on('postgres_changes', {
             event: 'INSERT',
@@ -247,4 +257,4 @@ async function listenRealtimeBarrage() {
 }
 </script>
 </body>
-</html> 
+</html>
